@@ -1,65 +1,65 @@
 from fastapi import APIRouter
 from pydantic import BaseModel
-from fastapi.responses import HTMLResponse
+from models import Book
+from database import SessionLocal
+
 
 router = APIRouter()
 
-BOOKS = [
-    {"id": 1, "title": "Book 1", "author": "author one", "published_year": 2000 , "available": True},
-    {"id": 2, "title": "Book 2", "author": "author two", "published_year": 2001 , "available": True},
-    {"id": 3, "title": "Book 3", "author": "author three", "published_year": 2002 , "available": True},
-    {"id": 4, "title": "Book 4", "author": "author four", "published_year": 2003 , "available": True},
-    {"id": 5, "title": "Book 5", "author": "author five", "published_year": 2004 , "available": True},
-]
 
-class Book(BaseModel):
+class Book_Schema(BaseModel):
     id: int
     title: str
     author: str
     published_year: int
     available: bool
 
-class BookCreate(Book):
-    pass
-
-class BookUpdate(Book):
-    pass
-
-class BookDelete(Book):
-    pass
-
-
 @router.get("/books")
 def read_books():
-    return BOOKS
+    db: SessionLocal = SessionLocal()
+    books = db.query(Book).all()
+    return books
 
 
 @router.post("/create-book")
-def create_book(b1: BookCreate):
-    found_book = False
-    for book in BOOKS:
-        if b1.title == book["title"]:
-            found_book = True
-            return HttpResponse(f"Book {book.id} already exists")
+def create_book(b1: Book_Schema):
+    db: SessionLocal = SessionLocal()
 
-    if not found_book:
-        BOOKS.append(b1)
+    existing_book = db.query(Book).filter(Book.title == b1.title).first()
+    if existing_book:
+        return {"message": "Book already exists"}
 
-    return b1
+    new_book = Book(id=b1.id, title=b1.title, author=b1.author, published_year=b1.published_year, available=True)
+    db.add(new_book)
+    db.commit()
+    db.refresh(new_book)
+    return new_book
 
 
 @router.put("/update-book/{title}")
-def update_book(title: str, b1: BookCreate):
-    book_updated = False
-    for book in BOOKS:
-        if book["title"] == title:
-            book["title"] = b1.title
-            book["author"] = b1.author
-            book["published_year"] = b1.published_year
-            book["available"] = b1.available
-            book_updated = True
+def update_book(title: str, b1: Book_Schema):
+    db: SessionLocal = SessionLocal()
+    existing_book = db.query(Book).filter(Book.title == title).first()
+    if not existing_book:
+        return {"message": "Book not found"}
+    existing_book.title = b1.title
+    existing_book.author = b1.author
+    existing_book.published_year = b1.published_year
+    existing_book.id = b1.id
+    existing_book.available = b1.available
+    db.add(existing_book)
+    db.commit()
+    db.refresh(existing_book)
+    return existing_book
 
-    if not book_updated:
-        return HTMLResponse(f"Book {title} not found")
-    else:
-        return HTMLResponse(f"Book Updated")
+
+@router.delete("/delete-book/{title}")
+def delete_book(title: str):
+    db: SessionLocal = SessionLocal()
+    existing_book = db.query(Book).filter(Book.title == title).first()
+    if not existing_book:
+        return {"message": "Book not found"}
+
+    db.delete(existing_book)
+    db.commit()
+    return {"message": "Book deleted"}
