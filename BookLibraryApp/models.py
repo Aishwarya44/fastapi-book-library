@@ -11,6 +11,7 @@ class Users(Base):
     password = Column(String, nullable=False)
     email = Column(String, nullable=False)
     active = Column(Boolean, default=True)
+    role = Column(String, nullable=True)
 
 class Book(Base):
     __tablename__ = "books"
