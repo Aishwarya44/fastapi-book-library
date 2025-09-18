@@ -8,8 +8,8 @@ from routers import books, auth
 
 app = FastAPI()
 
-app.include_router(books.router, tags=["books"])
-app.include_router(auth.router, tags=["auth"])
+app.include_router(books.router, tags=["books"], prefix="/books")
+app.include_router(auth.router, tags=["auth"], prefix="/auth")
 
 
 
